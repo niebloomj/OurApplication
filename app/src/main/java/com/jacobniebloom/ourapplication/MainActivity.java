@@ -1,26 +1,25 @@
 package com.jacobniebloom.ourapplication;
 
 import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.ActionBar;
+import android.content.Context;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
+import android.os.Looper;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.content.Context;
-import android.os.Build;
-import android.os.Bundle;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarActivity;
 import android.telephony.SmsManager;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.support.v4.widget.DrawerLayout;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,12 +35,20 @@ public class MainActivity extends ActionBarActivity
 	 * Used to store the last screen title. For use in {@link #restoreActionBar()}.
 	 */
 	private CharSequence mTitle;
+	private Button btn_ring;
+	private Button shareLocation;
+	private TextView txtLat;
+	private LocationManager locationManager;
 
-    private Button btn_ring;
-    private Button shareLocation;
+
+//	@Override
+//    public void onLocationChanged(Location location) {
+//
+//    }
+
 
 	@Override
-	protected void onCreate (Bundle savedInstanceState) {
+	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
@@ -54,37 +61,85 @@ public class MainActivity extends ActionBarActivity
 				R.id.navigation_drawer,
 				(DrawerLayout) findViewById(R.id.drawer_layout));
 
-        //set up dah button
-        btn_ring = (Button) findViewById(R.id.ringButton);
-        shareLocation  = (Button) findViewById(R.id.shareLocation);
-        btn_ring.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.v("OurApp","Button Clicked");
-                sendSMSManager();
-            }
-        });
+		//set up dah buttonz
+		btn_ring = (Button) findViewById(R.id.ringButton);
 
+		btn_ring.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Log.v("OurApp", "Button Clicked");
+				sendSMSManager("text");
+			}
+		});
+
+
+		shareLocation = (Button) findViewById(R.id.shareLocation);
+		final LocationListener locationListener = new LocationListener() {
+			@Override
+			public void onStatusChanged(String provider, int status, Bundle extras) {
+				Log.v("LocationListener", "onStatusChanged");
+			}
+
+			@Override
+			public void onProviderEnabled(String provider) {
+				Log.v("LocationListener", "onProviderEnabled");
+			}
+
+			@Override
+			public void onProviderDisabled(String provider) {
+				Log.v("LocationListener", "onProviderDisabled");
+			}
+
+			@Override
+			public void onLocationChanged(Location location) {
+				Log.v("LocationListener", "onLocationChanged");
+				txtLat = (TextView) findViewById(R.id.textview);
+				String locationText = "Latitude:" + location.getLatitude() + ", Longitude:" + location.getLongitude();
+				txtLat.setText(locationText);
+				sendSMSManager("GPS");
+			}
+		};
+
+		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		Criteria criteria = new Criteria();
+		criteria.setAccuracy(Criteria.ACCURACY_FINE);
+		final String dahProvider = locationManager.getBestProvider(criteria, true);
+
+		Log.v("Provider", dahProvider);
+
+		shareLocation.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				locationManager.requestSingleUpdate(dahProvider, locationListener, Looper.myLooper());
+			}
+		});
 	}
 
-    public  void sendSMSManager() {
-        Toast.makeText(getApplicationContext(), "Starting text", Toast.LENGTH_LONG).show();
-        try {
-            String smsNumber = "9733095897";
-            String smsText = "Poop";
 
-            SmsManager.getDefault().sendTextMessage("9733095897", null, "Jacob, I am outside", null, null);
-            SmsManager.getDefault().sendTextMessage("3124205033", null, "Sar, I am outside", null, null);
+	public void sendSMSManager(String feature) {
+		if (feature.equals("text")) {
+			Toast.makeText(getApplicationContext(), "Starting text", Toast.LENGTH_SHORT).show();
+			try {
+				SmsManager.getDefault().sendTextMessage("3124205033", null, "Sar, I am outside", null, null);
+				Toast.makeText(getApplicationContext(), "Text Sent", Toast.LENGTH_LONG).show();
+			} catch (Exception ex) {
+				Toast.makeText(getApplicationContext(), "Crash", Toast.LENGTH_LONG).show();
+				ex.printStackTrace();
+			}
+		} else if (feature.equals("GPS")) {
+			try {
+				SmsManager.getDefault().sendTextMessage("3124205033", null, txtLat.getText().toString(), null, null);
+			} catch (Exception e) {
+				Log.e("OurApp", "ERROR GPS");
+				e.printStackTrace();
 
-            Toast.makeText(getApplicationContext(), "Sent", Toast.LENGTH_LONG).show();
-        } catch (Exception ex) {
-            Toast.makeText(getApplicationContext(), "Crash", Toast.LENGTH_LONG).show();
-            ex.printStackTrace();
-        }
-    }
+			}
+
+		}
+	}
 
 	@Override
-	public void onNavigationDrawerItemSelected (int position) {
+	public void onNavigationDrawerItemSelected(int position) {
 		// update the main content by replacing fragments
 		FragmentManager fragmentManager = getSupportFragmentManager();
 		fragmentManager.beginTransaction()
@@ -92,7 +147,7 @@ public class MainActivity extends ActionBarActivity
 				.commit();
 	}
 
-	public void onSectionAttached (int number) {
+	public void onSectionAttached(int number) {
 		switch (number) {
 			case 1:
 				mTitle = getString(R.string.title_section1);
@@ -106,7 +161,7 @@ public class MainActivity extends ActionBarActivity
 		}
 	}
 
-	public void restoreActionBar () {
+	public void restoreActionBar() {
 		ActionBar actionBar = getSupportActionBar();
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
 		actionBar.setDisplayShowTitleEnabled(true);
@@ -115,7 +170,7 @@ public class MainActivity extends ActionBarActivity
 
 
 	@Override
-	public boolean onCreateOptionsMenu (Menu menu) {
+	public boolean onCreateOptionsMenu(Menu menu) {
 		if (!mNavigationDrawerFragment.isDrawerOpen()) {
 			// Only show items in the action bar relevant to this screen
 			// if the drawer is not showing. Otherwise, let the drawer
@@ -128,7 +183,7 @@ public class MainActivity extends ActionBarActivity
 	}
 
 	@Override
-	public boolean onOptionsItemSelected (MenuItem item) {
+	public boolean onOptionsItemSelected(MenuItem item) {
 		// Handle action bar item clicks here. The action bar will
 		// automatically handle clicks on the Home/Up button, so long
 		// as you specify a parent activity in AndroidManifest.xml.
@@ -152,11 +207,14 @@ public class MainActivity extends ActionBarActivity
 		 */
 		private static final String ARG_SECTION_NUMBER = "section_number";
 
+		public PlaceholderFragment() {
+		}
+
 		/**
 		 * Returns a new instance of this fragment for the given section
 		 * number.
 		 */
-		public static PlaceholderFragment newInstance (int sectionNumber) {
+		public static PlaceholderFragment newInstance(int sectionNumber) {
 			PlaceholderFragment fragment = new PlaceholderFragment();
 			Bundle args = new Bundle();
 			args.putInt(ARG_SECTION_NUMBER, sectionNumber);
@@ -164,18 +222,15 @@ public class MainActivity extends ActionBarActivity
 			return fragment;
 		}
 
-		public PlaceholderFragment () {
-		}
-
 		@Override
-		public View onCreateView (LayoutInflater inflater, ViewGroup container,
-		                          Bundle savedInstanceState) {
+		public View onCreateView(LayoutInflater inflater, ViewGroup container,
+		                         Bundle savedInstanceState) {
 			View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 			return rootView;
 		}
 
 		@Override
-		public void onAttach (Activity activity) {
+		public void onAttach(Activity activity) {
 			super.onAttach(activity);
 			((MainActivity) activity).onSectionAttached(
 					getArguments().getInt(ARG_SECTION_NUMBER));

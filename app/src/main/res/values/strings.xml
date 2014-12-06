@@ -10,6 +10,6 @@
     <string name="action_example">Example action</string>
     <string name="action_settings">Settings</string>
     <string name="ringButton">SHARE POOP</string>
-    <string name="shareLocation">Share Location</string>
+    <string name="shareLocation">Share my Location</string>
 
 </resources>
